@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>文件/HTML链接 转 Markdown</title>
+</head>
+<body>
+    <h1>上传文件 或 填写 HTML 链接 转换为 Markdown</h1>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        <div>
+            <label>上传文件（支持任意格式）:</label><br>
+            <input type="file" name="file">
+        </div>
+        <hr>
+        <div>
+            <label>或者输入 HTML 页面链接（比如 https://example.com）:</label><br>
+            <input type="text" name="html_url" size="80" placeholder="请输入网页链接...">
+        </div>
+        <br>
+        <button type="submit">提交并转换</button>
+    </form>
+
+    {% if download_link %}
+        <p style="margin-top:20px;">
+            ✅ 转换成功！
+            <a href="{{ download_link }}">下载 Markdown 文件</a><br>
+            <a href="{{ download_link.replace('/download/', '/convert-docx/') }}">转换为 Word (.docx)</a>
+        </p>
+    {% endif %}
+</body>
+</html>
