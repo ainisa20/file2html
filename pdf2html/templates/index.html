@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PDF转换与内容提取系统</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        .section {
+            margin: 2rem 0;
+            padding: 2rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+        }
+        .hidden { display: none; }
+        pre { background: #f8f9fa; padding: 1rem; border-radius: 5px; }
+        .output-link { word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">PDF转换与内容提取系统</h1>
+
+        <!-- 错误提示 -->
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <!-- PDF转换模块 -->
+        <div class="section">
+            <h3>PDF转HTML</h3>
+            <form method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <input type="file" class="form-control" name="pdf_file" accept=".pdf" required>
+                </div>
+                <button type="submit" class="btn btn-primary">转换PDF</button>
+            </form>
+
+            {% if pdf_conversion_success %}
+            <div class="mt-3">
+                <div class="alert alert-success">
+                    转换成功！生成文件：
+                    <a href="{{ html_url }}" class="output-link" target="_blank">{{ html_url }}</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 内容提取模块 -->
+        <div class="section">
+            <h3>网页内容提取</h3>
+            <form method="post">
+                <div class="mb-3">
+                    <input type="url"
+                           class="form-control"
+                           name="url"
+                           value="{{ html_url if html_url else '' }}"
+                           placeholder="输入HTML文件URL"
+                           required>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col">
+                        <select class="form-select"
+                                name="action"
+                                id="actionSelect"
+                                required>
+                            <option value="scrape">提取内容</option>
+                            <option value="map">网站地图</option>
+                            <option value="crawl">深度抓取</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 动态选项 -->
+                <div id="scrapeOptions" class="options">
+                    <h5>内容格式</h5>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="formats"
+                               value="markdown"
+                               checked>
+                        <label class="form-check-label">Markdown</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="formats"
+                               value="html">
+                        <label class="form-check-label">HTML</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="formats"
+                               value="rawHtml">
+                        <label class="form-check-label">rawHtml</label>
+                    </div>
+                     <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="formats"
+                               value="links">
+                        <label class="form-check-label">Links</label>
+                    </div>
+                </div>
+
+                <div id="crawlOptions" class="options hidden">
+                    <h5>抓取设置</h5>
+                    <div class="mb-3">
+                        <label class="form-label">最大页面数</label>
+                        <input type="number"
+                               class="form-control"
+                               name="limit"
+                               value="100"
+                               min="1"
+                               max="1000">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">开始提取</button>
+            </form>
+
+            {% if crawl_results %}
+            <div class="mt-4">
+                <h4>提取结果</h4>
+                {% if action == 'crawl' %}
+                    <div class="alert alert-info">
+                        <p>任务ID: <code>{{ crawl_results.id }}</code></p>
+                        <p>状态查询: <a href="{{ crawl_results.url }}" target="_blank">{{ crawl_results.url }}</a></p>
+                    </div>
+                {% else %}
+                    <!-- 展示Markdown内容 -->
+                    {% if crawl_results.data and crawl_results.data.markdown %}
+                        <h5>Markdown内容</h5>
+                        <pre>{{ crawl_results.data.markdown }}</pre>
+                    {% endif %}
+
+                    {% if 'rawHtml' in request.form.getlist('formats') and crawl_results.data and crawl_results.data.rawHtml %}
+                        <h5 class="mt-3">Raw HTML 内容</h5>
+                        <pre>{{ crawl_results.data.rawHtml }}</pre>
+
+                        <!-- 下载HTML按钮 -->
+                        {% if html_filename %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('download_html', filename=html_filename) }}"
+                               class="btn btn-success">
+                               下载 HTML 文件
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+
+                    <h5 class="mt-3">原始数据</h5>
+                    <pre>{{ crawl_results | tojson(indent=2) }}</pre>
+
+                    <!-- 下载Markdown按钮 -->
+                    {% if markdown_filename %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('download_markdown', filename=markdown_filename) }}"
+                           class="btn btn-success">
+                           下载 Markdown 文件
+                        </a>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // 动态显示选项
+        function updateOptions() {
+            const action = document.getElementById('actionSelect').value;
+            document.querySelectorAll('.options').forEach(el => {
+                el.classList.add('hidden');
+            });
+            document.getElementById(action === 'crawl' ? 'crawlOptions' : 'scrapeOptions')
+                .classList.remove('hidden');
+        }
+
+        // 初始化事件
+        document.getElementById('actionSelect').addEventListener('change', updateOptions);
+        document.addEventListener('DOMContentLoaded', updateOptions);
+    </script>
+</body>
+</html>
