@@ -7,4 +7,5 @@
 
 # 方式2:使用pdf2htmlex
 ## 1、docker pull pdf2htmlex的镜像
-## 2、本地运行app.py
+## 2、docker 部署 firecrawl
+## 3、本地运行app.py
