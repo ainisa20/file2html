@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bullseye
+FROM python:3.13-slim
 
 # 设置环境变量：关闭字节码、开启实时输出
 ENV PYTHONDONTWRITEBYTECODE=1 \
